@@ -42,7 +42,7 @@ function cleanText(value = "") {
 }
 
 function tagValue(xml, tag) {
-  const match = xml.match(new RegExp("<" + tag + "(?:\s[^>]*)?>([\s\S]*?)</" + tag + ">", "i"));
+  const match = xml.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
   return match ? decodeXml(match[1].trim()) : "";
 }
 
