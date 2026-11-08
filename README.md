@@ -1,20 +1,24 @@
 # Dubbindo Nuvio
 
-Community integration for public Dubbindo video listings with Nuvio and Stremio-compatible clients.
+Community integration for Dubbindo with Nuvio and Stremio-compatible clients.
 
 ## Current implementation
 
-The addon no longer uses a hard-coded Cars demo. It reads Dubbindo's linked RSS feeds and builds separate catalogs for:
+The addon reads Dubbindo's public RSS feeds and exposes separate catalogs:
 
-- Latest videos
+- Terbaru Dubbindo
 - Film Movie
-- TV Series episodes
+- TV Series
 - Anime Movie
-- Anime Series episodes
+- Anime Series
 
-Each RSS entry is exposed as an independently playable video item. Search filters the titles and descriptions returned by each feed. Results are cached in memory for three minutes.
+Movie feeds appear as movie entries. TV Series and Anime Series feeds are grouped into series entries using season/episode patterns in their titles. Each grouped series metadata object includes an episode list, and each episode opens its corresponding Dubbindo embed page.
 
-Playback opens the corresponding Dubbindo embed page. It does **not** extract or proxy MP4/HLS media URLs, and the site's age-confirmation flow remains intact.
+Search filters the returned catalog names and descriptions. Feed responses are cached in memory for three minutes.
+
+## Playback behavior
+
+Playback opens Dubbindo's own embed page. The addon does **not** extract or proxy MP4/HLS media URLs. The website's age-confirmation prompt and any other site-side requirements remain in place.
 
 ## Deploy on Render
 
@@ -37,12 +41,12 @@ npm install
 npm start
 ```
 
-## Limitations and next steps
+## Known limitations
 
-- The addon reads the RSS feed items returned by Dubbindo; it does not guarantee that every historical page is included if the feed itself is paginated or limited.
-- The TV and anime-series catalogs currently expose each uploaded episode as its own playable item, rather than grouping episodes into season-level series pages.
-- Playback opens Dubbindo's own embed page. Native in-app playback needs a documented, authorized direct media integration.
-- The website's age-confirmation prompt is not bypassed.
+- The addon depends on the RSS feeds exposed by Dubbindo. Feed item limits determine how much of the catalog is available; this is not yet a crawl of every historical listing page.
+- Series grouping is inferred from title patterns such as `S1 E4`, `S01E04`, and `Episode 4`. Titles without recognizable episode numbering may be grouped as a one-episode series.
+- Episode grouping and playback have been implemented in the addon code but still need a live Render/Nuvio test.
+- Playback is through Dubbindo's official embed page, not native in-app MP4/HLS playback.
 
 ## License
 
