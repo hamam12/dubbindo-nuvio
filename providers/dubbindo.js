@@ -65,9 +65,14 @@ function getStreams(tmdbId, mediaType, season, episode) {
 
   var pageUrl = MOVIE_MAP[String(tmdbId)];
   if (!pageUrl) {
-    console.info("[Dubbindo] No verified title mapping for TMDB ID:", tmdbId);
+    console.info("[Dubbindo] DIAG no_mapping", {
+      tmdbId: String(tmdbId),
+      mediaType: mediaType
+    });
     return Promise.resolve([]);
   }
+
+  console.info("[Dubbindo] DIAG request_start", { url: pageUrl });
 
   return fetch(pageUrl, {
     headers: {
@@ -76,31 +81,91 @@ function getStreams(tmdbId, mediaType, season, episode) {
     }
   })
     .then(function (response) {
-      if (!response || !response.ok) {
-        throw new Error("Watch page HTTP " + (response ? response.status : "error"));
-      }
-      return response.text();
-    })
-    .then(function (html) {
-      // Respect the site's age-confirmation gate; do not simulate consent.
-      if (/are you 18 years old or above|age.?verification|confirm your age/i.test(html)) {
-        console.info("[Dubbindo] Age confirmation is required; no stream extracted.");
+      if (!response) {
+        console.error("[Dubbindo] DIAG no_response_object");
         return [];
       }
 
-      var urls = extractMediaUrls(html, pageUrl);
-      return urls.map(function (url, index) {
-        return {
-          name: "Dubbindo",
-          title: urls.length > 1 ? "Dubbindo source " + (index + 1) : "Dubbindo direct stream",
-          url: url,
-          quality: "Unknown",
-          headers: { "Referer": pageUrl }
-        };
+      var finalUrl = response.url || pageUrl;
+      var contentType = "";
+      try {
+        contentType = response.headers && response.headers.get
+          ? (response.headers.get("content-type") || "")
+          : "";
+      } catch (_) {}
+
+      console.info("[Dubbindo] DIAG response", {
+        status: response.status,
+        ok: response.ok,
+        redirected: !!response.redirected,
+        finalUrl: finalUrl,
+        contentType: contentType
+      });
+
+      return response.text().then(function (html) {
+        html = String(html || "");
+        console.info("[Dubbindo] DIAG body_received", {
+          characters: html.length,
+          contentType: contentType
+        });
+
+        // Respect the site's age-confirmation gate; do not simulate consent.
+        if (/are you 18 years old or above|age.?verification|confirm your age/i.test(html)) {
+          console.warn("[Dubbindo] DIAG age_gate", {
+            status: response.status,
+            finalUrl: finalUrl,
+            characters: html.length
+          });
+          return [];
+        }
+
+        if (!response.ok) {
+          console.error("[Dubbindo] DIAG http_error", {
+            status: response.status,
+            finalUrl: finalUrl
+          });
+          return [];
+        }
+
+        if (!html.trim()) {
+          console.warn("[Dubbindo] DIAG empty_body", {
+            status: response.status,
+            finalUrl: finalUrl
+          });
+          return [];
+        }
+
+        var urls = extractMediaUrls(html, finalUrl);
+        if (!urls.length) {
+          console.warn("[Dubbindo] DIAG no_direct_media", {
+            status: response.status,
+            finalUrl: finalUrl,
+            contentType: contentType,
+            characters: html.length
+          });
+          return [];
+        }
+
+        console.info("[Dubbindo] DIAG media_found", {
+          count: urls.length,
+          finalUrl: finalUrl
+        });
+
+        return urls.map(function (url, index) {
+          return {
+            name: "Dubbindo",
+            title: urls.length > 1 ? "Dubbindo source " + (index + 1) : "Dubbindo direct stream",
+            url: url,
+            quality: "Unknown",
+            headers: { "Referer": finalUrl }
+          };
+        });
       });
     })
     .catch(function (error) {
-      console.error("[Dubbindo] Stream lookup failed:", error && error.message ? error.message : error);
+      console.error("[Dubbindo] DIAG request_error", {
+        message: error && error.message ? error.message : String(error)
+      });
       return [];
     });
 }
