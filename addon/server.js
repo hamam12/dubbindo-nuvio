@@ -7,7 +7,7 @@ const BASE = "https://www.dubbindo.site";
 const FEEDS = [
   { id: "dubbindo-latest", name: "Terbaru Dubbindo", url: "/videos/latest/rss", type: "movie" },
   { id: "dubbindo-movies", name: "Film Movie", url: "/videos/category/1/rss", type: "movie" },
-  { id: "dubbindo-other", name: "Other", url: "/videos/category/2/rss", type: "movie" },
+  { id: "dubbindo-other", name: "Other", url: "/videos/category/other/rss", type: "movie" },
   { id: "dubbindo-tv", name: "TV Series", url: "/videos/category/3/rss", type: "series" },
   { id: "dubbindo-anime-movies", name: "Anime Movie", url: "/videos/category/4/rss", type: "movie" },
   { id: "dubbindo-anime-series", name: "Anime Series", url: "/videos/category/5/rss", type: "series" }
