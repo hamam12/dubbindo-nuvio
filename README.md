@@ -1,17 +1,20 @@
 # Dubbindo Nuvio
 
-Community integration for Dubbindo with Nuvio and Stremio-compatible clients.
+Community integration for public Dubbindo video listings with Nuvio and Stremio-compatible clients.
 
-## Current status
+## Current implementation
 
-The addon now exposes a **Cars (2006)** movie entry in the Dubbindo Movies catalog and returns Dubbindo's public embed page as an external playback link.
+The addon no longer uses a hard-coded Cars demo. It reads Dubbindo's linked RSS feeds and builds separate catalogs for:
 
-- Catalog: working for the initial Cars test entry.
-- Metadata: working for the initial Cars test entry.
-- Playback: opens Dubbindo's official embed page.
-- Direct MP4/HLS stream extraction: not implemented; no verified authorized direct media URL is exposed by the public page inspection.
+- Latest videos
+- Film Movie
+- TV Series episodes
+- Anime Movie
+- Anime Series episodes
 
-The public watch page includes an age-confirmation prompt. The addon does not attempt to bypass it. Playback therefore follows the same confirmation and player flow as the Dubbindo site.
+Each RSS entry is exposed as an independently playable video item. Search filters the titles and descriptions returned by each feed. Results are cached in memory for three minutes.
+
+Playback opens the corresponding Dubbindo embed page. It does **not** extract or proxy MP4/HLS media URLs, and the site's age-confirmation flow remains intact.
 
 ## Deploy on Render
 
@@ -34,9 +37,12 @@ npm install
 npm start
 ```
 
-## Next step: expand the catalog and playback
+## Limitations and next steps
 
-The initial entry is a working integration test, not a full-site catalog scraper. More catalog entries can be added from public listing pages. Native in-app playback requires a direct MP4/HLS URL or a documented player integration that is authorized for this use; the addon will not guess private endpoints or bypass DRM, authentication, age gates, paywalls, or access controls.
+- The addon reads the RSS feed items returned by Dubbindo; it does not guarantee that every historical page is included if the feed itself is paginated or limited.
+- The TV and anime-series catalogs currently expose each uploaded episode as its own playable item, rather than grouping episodes into season-level series pages.
+- Playback opens Dubbindo's own embed page. Native in-app playback needs a documented, authorized direct media integration.
+- The website's age-confirmation prompt is not bypassed.
 
 ## License
 
