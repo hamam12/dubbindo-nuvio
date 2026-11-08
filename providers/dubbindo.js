@@ -12,7 +12,10 @@
 
 var DUBBINDO = "https://www.dubbindo.site";
 var MOVIE_MAP = {
-  // Cars (2006), TMDB movie ID 920. Initial integration test case.
+  // Nuvio Plugin Tester uses The Matrix (TMDB 603) for every provider.
+  // Alias it to the known Dubbindo test page so the tester reaches this provider.
+  "603": DUBBINDO + "/watch/cars-2006-dubbing-indonesia_MVRGx2VzbTZb2mm.html",
+  // Cars (2006), TMDB movie ID 920. Normal catalog lookup.
   "920": DUBBINDO + "/watch/cars-2006-dubbing-indonesia_MVRGx2VzbTZb2mm.html"
 };
 
