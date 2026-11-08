@@ -7,18 +7,18 @@ const BASE = "https://www.dubbindo.site";
 const FEEDS = [
   { id: "dubbindo-latest", name: "Terbaru Dubbindo", url: "/videos/latest/rss", type: "movie" },
   { id: "dubbindo-movies", name: "Film Movie", url: "/videos/category/1/rss", type: "movie" },
-  { id: "dubbindo-tv", name: "TV Series (episode)", url: "/videos/category/3/rss", type: "movie" },
+  { id: "dubbindo-tv", name: "TV Series", url: "/videos/category/3/rss", type: "series" },
   { id: "dubbindo-anime-movies", name: "Anime Movie", url: "/videos/category/4/rss", type: "movie" },
-  { id: "dubbindo-anime-series", name: "Anime Series (episode)", url: "/videos/category/5/rss", type: "movie" }
+  { id: "dubbindo-anime-series", name: "Anime Series", url: "/videos/category/5/rss", type: "series" }
 ];
 
 const manifest = {
   id: "community.dubbindo.nuvio",
-  version: "0.3.0",
+  version: "0.4.0",
   name: "Dubbindo",
   description: "Katalog Dubbindo: film, serial TV, dan anime dubbing Indonesia.",
   resources: ["catalog", "meta", "stream"],
-  types: ["movie"],
+  types: ["movie", "series"],
   catalogs: FEEDS.map(feed => ({
     type: feed.type, id: feed.id, name: feed.name,
     extra: [{ name: "search", isRequired: false }]
@@ -70,19 +70,84 @@ function parseFeed(xml, type) {
     const description = cleanText(tagValue(item, "description"));
     const poster = imageFromItem(item);
     return {
-      id: "dubbindo:" + slug, type, name: title,
+      id: "dubbindo:episode:" + slug, type, name: title,
       description: description || undefined, poster, background: poster,
       posterShape: "poster", _sourceUrl: url,
-      _embedUrl: BASE + "/embed/" + encodeURIComponent(token)
+      _embedUrl: BASE + "/embed/" + encodeURIComponent(token),
+      _slug: slug
     };
   }).filter(Boolean);
+}
+
+function parseEpisode(title) {
+  const patterns = [
+    { re: /\bS(?:eason)?\s*(\d{1,2})\s*[- ]*E(?:p(?:isode)?)?\s*(\d{1,3})\b/i, season: 1, episode: 2 },
+    { re: /\bS(\d{1,2})E(\d{1,3})\b/i, season: 1, episode: 2 },
+    { re: /\bSeason\s*(\d{1,2})\s*Episode\s*(\d{1,3})\b/i, season: 1, episode: 2 },
+    { re: /\bEpisode\s*(\d{1,3})\b/i, season: 0, episode: 1 },
+    { re: /\bEps?\s*(\d{1,3})\b/i, season: 0, episode: 1 }
+  ];
+  for (const pattern of patterns) {
+    const match = title.match(pattern.re);
+    if (!match) continue;
+    const season = pattern.season === 0 ? 1 : Number(match[pattern.season]);
+    const episode = Number(match[pattern.episode]);
+    const name = cleanText(title.replace(pattern.re, " ")
+      .replace(/\b[\[(]?(?:Bahasa Indonesia|Dubbing Indonesia|Dub Indo|Indo Dub|202\d|1080p|720p)[\])]?/ig, " ")
+      .replace(/[\s\-–|:]+$/g, ""));
+    return { seriesName: name || title, season, episode };
+  }
+  return { seriesName: title, season: 1, episode: 1 };
+}
+
+function slugify(value) {
+  return value.toLowerCase().normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 90) || "series";
+}
+
+function groupSeries(items) {
+  const groups = new Map();
+  for (const item of items) {
+    const parsed = parseEpisode(item.name);
+    const key = slugify(parsed.seriesName);
+    if (!groups.has(key)) {
+      groups.set(key, {
+        id: "dubbindo:series:" + key,
+        type: "series",
+        name: parsed.seriesName,
+        description: item.description,
+        poster: item.poster,
+        background: item.background,
+        posterShape: "poster",
+        links: [{ name: "Dubbindo", category: "website", url: item._sourceUrl }],
+        videos: []
+      });
+    }
+    const group = groups.get(key);
+    const duplicate = group.videos.some(video => video.id === item.id);
+    if (!duplicate) {
+      group.videos.push({
+        id: item.id,
+        title: item.name,
+        season: parsed.season,
+        episode: parsed.episode,
+        overview: item.description,
+        thumbnail: item.poster
+      });
+    }
+  }
+  for (const group of groups.values()) {
+    group.videos.sort((a, b) => a.season - b.season || a.episode - b.episode);
+  }
+  return [...groups.values()];
 }
 
 async function getFeed(feed) {
   const cached = cache.get(feed.url);
   if (cached && Date.now() - cached.time < CACHE_MS) return cached.items;
   const response = await fetch(BASE + feed.url, {
-    headers: { "User-Agent": "Dubbindo-Nuvio-Addon/0.3.0", "Accept": "application/rss+xml, application/xml, text/xml" },
+    headers: { "User-Agent": "Dubbindo-Nuvio-Addon/0.4.0", "Accept": "application/rss+xml, application/xml, text/xml" },
     signal: AbortSignal.timeout(12000)
   });
   if (!response.ok) throw new Error("Dubbindo RSS returned HTTP " + response.status);
@@ -93,23 +158,35 @@ async function getFeed(feed) {
   return items;
 }
 
-function publicMeta(item) {
-  const { _sourceUrl, _embedUrl, ...meta } = item;
+async function allItemsForType(type) {
+  const feeds = FEEDS.filter(feed => feed.type === type);
+  const lists = await Promise.all(feeds.map(getFeed));
+  const unique = new Map();
+  for (const item of lists.flat()) unique.set(item.id, item);
+  return [...unique.values()];
+}
+
+function publicMovie(item) {
+  const { _sourceUrl, _embedUrl, _slug, ...meta } = item;
+  meta.type = "movie";
   meta.links = [{ name: "Dubbindo", category: "website", url: _sourceUrl }];
   return meta;
 }
 
 const builder = new addonBuilder(manifest);
+
 builder.defineCatalogHandler(async ({ type, id, extra }) => {
   const feed = FEEDS.find(entry => entry.id === id && entry.type === type);
   if (!feed) return { metas: [] };
   try {
     const query = String(extra?.search || "").trim().toLocaleLowerCase("id");
-    const items = await getFeed(feed);
-    const filtered = query ? items.filter(item =>
-      (item.name + " " + (item.description || "")).toLocaleLowerCase("id").includes(query)
-    ) : items;
-    return { metas: filtered.slice(0, 100).map(publicMeta) };
+    let items = await getFeed(feed);
+    let metas = type === "series" ? groupSeries(items) : items.map(publicMovie);
+    if (query) metas = metas.filter(meta =>
+      (meta.name + " " + (meta.description || "")).toLocaleLowerCase("id").includes(query)
+    );
+    const skip = Math.max(0, Number(extra?.skip) || 0);
+    return { metas: metas.slice(skip, skip + 100) };
   } catch (error) {
     console.error("[Dubbindo] Catalog error:", error.message);
     return { metas: [] };
@@ -117,31 +194,24 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
 });
 
 builder.defineMetaHandler(async ({ type, id }) => {
-  if (type !== "movie") return { meta: null };
   try {
-    const slug = String(id || "").replace(/^dubbindo:/, "");
-    if (!slug || slug.includes("/") || slug.includes("..")) return { meta: null };
-    for (const feed of FEEDS) {
-      const found = (await getFeed(feed)).find(item => item.id === id);
-      if (found) return { meta: publicMeta(found) };
+    if (type === "series" && String(id).startsWith("dubbindo:series:")) {
+      const key = String(id).slice("dubbindo:series:".length);
+      const items = await allItemsForType("series");
+      const group = groupSeries(items).find(meta => meta.id === id || slugify(meta.name) === key);
+      return { meta: group || null };
     }
-    const pageUrl = BASE + "/watch/" + encodeURIComponent(slug) + ".html";
-    const response = await fetch(pageUrl, {
-      headers: { "User-Agent": "Dubbindo-Nuvio-Addon/0.3.0" },
-      signal: AbortSignal.timeout(12000)
-    });
-    if (!response.ok) return { meta: null };
-    const html = await response.text();
-    const title = (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i) || [])[1];
-    if (!title) return { meta: null };
-    const description = (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i) || [])[1];
-    const poster = (html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']*)/i) || [])[1];
-    return { meta: {
-      id, type, name: cleanText(title),
-      description: description ? cleanText(description) : undefined,
-      poster, background: poster,
-      links: [{ name: "Dubbindo", category: "website", url: pageUrl }]
-    }};
+
+    if (type === "movie" && String(id).startsWith("dubbindo:episode:")) {
+      const items = await allItemsForType("series");
+      const found = items.find(item => item.id === id);
+      return { meta: found ? publicMovie(found) : null };
+    }
+
+    if (type !== "movie") return { meta: null };
+    const items = await allItemsForType("movie");
+    const found = items.find(item => item.id === id);
+    return { meta: found ? publicMovie(found) : null };
   } catch (error) {
     console.error("[Dubbindo] Metadata error:", error.message);
     return { meta: null };
@@ -150,19 +220,16 @@ builder.defineMetaHandler(async ({ type, id }) => {
 
 builder.defineStreamHandler(async ({ type, id }) => {
   try {
-    const slug = String(id || "").replace(/^dubbindo:/, "");
-    if (type !== "movie" || !slug || slug.includes("/") || slug.includes("..")) return { streams: [] };
-    for (const feed of FEEDS) {
-      const found = (await getFeed(feed)).find(item => item.id === id);
-      if (found && found._embedUrl) return { streams: [{
-        name: "Dubbindo", title: "Buka pemutar resmi Dubbindo", externalUrl: found._embedUrl
-      }]};
-    }
-    const token = slug.includes("_") ? slug.slice(slug.lastIndexOf("_") + 1) : "";
-    return token ? { streams: [{
-      name: "Dubbindo", title: "Buka pemutar resmi Dubbindo",
-      externalUrl: BASE + "/embed/" + encodeURIComponent(token)
-    }] } : { streams: [] };
+    const itemId = String(id || "");
+    if (type !== "movie" && type !== "series") return { streams: [] };
+    const items = await allItemsForType(type === "series" ? "series" : "movie");
+    const found = items.find(item => item.id === itemId);
+    if (!found || !found._embedUrl) return { streams: [] };
+    return { streams: [{
+      name: "Dubbindo",
+      title: "Buka pemutar resmi Dubbindo",
+      externalUrl: found._embedUrl
+    }]};
   } catch (error) {
     console.error("[Dubbindo] Stream error:", error.message);
     return { streams: [] };
@@ -172,10 +239,13 @@ builder.defineStreamHandler(async ({ type, id }) => {
 const app = express();
 app.disable("x-powered-by");
 app.get("/healthz", (_req, res) => res.json({
-  ok: true, addon: manifest.id, version: manifest.version,
-  status: "rss-catalog-and-official-embed",
+  ok: true,
+  addon: manifest.id,
+  version: manifest.version,
+  status: "rss-catalog-series-grouping-official-embed",
   catalogs: FEEDS.map(({ id, name, type }) => ({ id, name, type })),
-  playbackMode: "official-embed", directStreamsConnected: false
+  playbackMode: "official-embed",
+  directStreamsConnected: false
 }));
 app.use(getRouter(builder.getInterface()));
 
