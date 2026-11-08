@@ -1,54 +1,47 @@
 # Dubbindo Nuvio
 
-Community integration for Dubbindo with Nuvio and Stremio-compatible clients.
+Native Nuvio plugin for finding direct MP4/HLS sources exposed by Dubbindo's public watch pages.
 
-## Current implementation
+## Install in Nuvio
 
-The addon reads Dubbindo's public RSS feeds and exposes separate catalogs:
+1. Open **Nuvio → Settings → Plugins**.
+2. Add this repository manifest URL:
 
-- Terbaru Dubbindo
-- Film Movie
-- Other
-- Uncategory
-- TV Series
-- Anime Movie
-- Anime Series
+   `https://raw.githubusercontent.com/hamam12/dubbindo-nuvio/main/manifest.json`
 
-Movie feeds appear as movie entries. TV Series and Anime Series feeds are grouped into series entries using season/episode patterns in their titles. Each grouped series metadata object includes an episode list, and each episode opens its corresponding Dubbindo embed page.
+3. Refresh the plugin repository and enable **Dubbindo Indonesia**.
 
-Search filters the returned catalog names and descriptions. Feed responses are cached in memory for three minutes. Each movie/series metadata entry also links to its official Dubbindo category page so users can continue through the site pagination.
+## Native provider status
 
-## Playback behavior
+- The native plugin lives at `providers/dubbindo.js`.
+- It follows Nuvio's provider contract: `getStreams(tmdbId, mediaType, season, episode)`.
+- Initial test mapping: **Cars (2006)**, TMDB movie ID `920`.
+- It returns only direct HTML5 `.mp4` or `.m3u8` URLs found in the public watch page.
+- It does not return an embed page as a playable stream, automate age confirmation, or bypass login, DRM, paywalls, or other access controls.
+- If Dubbindo serves its age-confirmation screen instead of a public video source, the plugin intentionally returns an empty stream list.
 
-Playback opens Dubbindo's own embed page. The addon does **not** extract or proxy MP4/HLS media URLs. The website's age-confirmation prompt and any other site-side requirements remain in place.
+## Current test limitation
 
-## Deploy on Render
+The Cars watch page currently presents an 18+ age-confirmation prompt in the page response available to the provider. The native extractor therefore cannot yet confirm a direct media URL or playback in Nuvio. The provider code and manifest are committed, but successful native playback is **not yet verified**.
 
-1. Open Render and choose **New + → Blueprint**.
-2. Connect GitHub and select `hamam12/dubbindo-nuvio`.
-3. Render reads `render.yaml` and creates the `dubbindo-nuvio-addon` service.
-4. Deploy using the Free plan.
-5. Verify `/healthz` and `/manifest.json` on the assigned Render URL.
-6. Add `https://YOUR-SERVICE-NAME.onrender.com/manifest.json` in Nuvio if its addon installation flow supports Stremio-compatible manifests.
+The first test should be run in Nuvio's Plugin Tester with movie TMDB ID `920`. A successful result must contain a direct MP4/HLS URL and play in Nuvio's native player.
 
-Free Render services can spin down after inactivity and may take longer to respond to the first request.
+## Repository contents
 
-## Local development
+- `manifest.json` — Nuvio plugin registry.
+- `providers/dubbindo.js` — native direct-stream provider.
+- `addon/` — separate Stremio-compatible catalog addon; it is not required for the native plugin.
+- `render.yaml` — deployment blueprint for the separate catalog addon.
 
-Requires Node.js 18 or newer.
+## Development
+
+The native provider uses the Nuvio JavaScript plugin runtime and the standard `fetch` API. The separate catalog addon can be run with Node.js 18+:
 
 ```bash
 cd addon
 npm install
 npm start
 ```
-
-## Known limitations
-
-- The addon includes the verified RSS categories: Film Movie, Other, TV Series, Anime Movie, Anime Series, and Uncategory. Dubbindo category pages use page_id pagination, but the pages display an 18+ age-confirmation prompt. This addon deliberately does not automate or bypass that confirmation, so it keeps RSS as its catalog source and adds official category-page links for browsing the remaining pages. Shorts is a separate site section and has not been added because a matching RSS endpoint has not been verified.
-- Series grouping is inferred from title patterns such as `S1 E4`, `S01E04`, and `Episode 4`. Titles without recognizable episode numbering may be grouped as a one-episode series.
-- Episode grouping and playback have been implemented in the addon code but still need a live Render/Nuvio test.
-- Playback is through Dubbindo's official embed page, not native in-app MP4/HLS playback.
 
 ## License
 
