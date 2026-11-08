@@ -5,18 +5,18 @@ const { addonBuilder, getRouter } = require("stremio-addon-sdk");
 
 const BASE = "https://www.dubbindo.site";
 const FEEDS = [
-  { id: "dubbindo-latest", name: "Terbaru Dubbindo", url: "/videos/latest/rss", type: "movie" },
-  { id: "dubbindo-movies", name: "Film Movie", url: "/videos/category/1/rss", type: "movie" },
-  { id: "dubbindo-other", name: "Other", url: "/videos/category/other/rss", type: "movie" },
-  { id: "dubbindo-uncategory", name: "Uncategory", url: "/videos/category/791/rss", type: "movie" },
-  { id: "dubbindo-tv", name: "TV Series", url: "/videos/category/3/rss", type: "series" },
-  { id: "dubbindo-anime-movies", name: "Anime Movie", url: "/videos/category/4/rss", type: "movie" },
-  { id: "dubbindo-anime-series", name: "Anime Series", url: "/videos/category/5/rss", type: "series" }
+  { id: "dubbindo-latest", name: "Terbaru Dubbindo", url: "/videos/latest/rss", listingUrl: "/videos/latest", type: "movie" },
+  { id: "dubbindo-movies", name: "Film Movie", url: "/videos/category/1/rss", listingUrl: "/videos/category/1", type: "movie" },
+  { id: "dubbindo-other", name: "Other", url: "/videos/category/other/rss", listingUrl: "/videos/category/other", type: "movie" },
+  { id: "dubbindo-uncategory", name: "Uncategory", url: "/videos/category/791/rss", listingUrl: "/videos/category/791", type: "movie" },
+  { id: "dubbindo-tv", name: "TV Series", url: "/videos/category/3/rss", listingUrl: "/videos/category/3", type: "series" },
+  { id: "dubbindo-anime-movies", name: "Anime Movie", url: "/videos/category/4/rss", listingUrl: "/videos/category/4", type: "movie" },
+  { id: "dubbindo-anime-series", name: "Anime Series", url: "/videos/category/5/rss", listingUrl: "/videos/category/5", type: "series" }
 ];
 
 const manifest = {
   id: "community.dubbindo.nuvio",
-  version: "0.6.0",
+  version: "0.7.0",
   name: "Dubbindo",
   description: "Katalog Dubbindo: film, serial TV, dan anime dubbing Indonesia.",
   resources: ["catalog", "meta", "stream"],
@@ -58,7 +58,7 @@ function imageFromItem(item) {
   return candidates.find(Boolean)?.[1] || undefined;
 }
 
-function parseFeed(xml, type) {
+function parseFeed(xml, type, listingUrl) {
   const items = xml.match(/<item\b[\s\S]*?<\/item>/gi) || [];
   return items.map(item => {
     const link = tagValue(item, "link");
@@ -76,6 +76,7 @@ function parseFeed(xml, type) {
       description: description || undefined, poster, background: poster,
       posterShape: "poster", _sourceUrl: url,
       _embedUrl: BASE + "/embed/" + encodeURIComponent(token),
+      _listingUrl: listingUrl ? BASE + listingUrl : BASE + "/videos/latest",
       _slug: slug
     };
   }).filter(Boolean);
@@ -122,7 +123,10 @@ function groupSeries(items) {
         poster: item.poster,
         background: item.background,
         posterShape: "poster",
-        links: [{ name: "Dubbindo", category: "website", url: item._sourceUrl }],
+        links: [
+          { name: "Tonton di Dubbindo", category: "website", url: item._sourceUrl },
+          { name: "Buka katalog kategori", category: "website", url: item._listingUrl }
+        ],
         videos: []
       });
     }
@@ -149,13 +153,13 @@ async function getFeed(feed) {
   const cached = cache.get(feed.url);
   if (cached && Date.now() - cached.time < CACHE_MS) return cached.items;
   const response = await fetch(BASE + feed.url, {
-    headers: { "User-Agent": "Dubbindo-Nuvio-Addon/0.6.0", "Accept": "application/rss+xml, application/xml, text/xml" },
+    headers: { "User-Agent": "Dubbindo-Nuvio-Addon/0.7.0", "Accept": "application/rss+xml, application/xml, text/xml" },
     signal: AbortSignal.timeout(12000)
   });
   if (!response.ok) throw new Error("Dubbindo RSS returned HTTP " + response.status);
   const xml = await response.text();
   if (!/<(?:rss|feed)\b/i.test(xml)) throw new Error("Dubbindo did not return an RSS feed");
-  const items = parseFeed(xml, feed.type);
+  const items = parseFeed(xml, feed.type, feed.listingUrl);
   cache.set(feed.url, { time: Date.now(), items });
   return items;
 }
@@ -171,7 +175,10 @@ async function allItemsForType(type) {
 function publicMovie(item) {
   const { _sourceUrl, _embedUrl, _slug, ...meta } = item;
   meta.type = "movie";
-  meta.links = [{ name: "Dubbindo", category: "website", url: _sourceUrl }];
+  meta.links = [
+    { name: "Tonton di Dubbindo", category: "website", url: _sourceUrl },
+    { name: "Buka katalog kategori", category: "website", url: item._listingUrl }
+  ];
   return meta;
 }
 
@@ -244,8 +251,8 @@ app.get("/healthz", (_req, res) => res.json({
   ok: true,
   addon: manifest.id,
   version: manifest.version,
-  status: "rss-catalog-series-grouping-uncategory-official-embed",
-  catalogs: FEEDS.map(({ id, name, type }) => ({ id, name, type })),
+  status: "rss-catalog-series-grouping-category-links-official-embed",
+  catalogs: FEEDS.map(({ id, name, type, listingUrl }) => ({ id, name, type, listingUrl: BASE + listingUrl })),
   playbackMode: "official-embed",
   directStreamsConnected: false
 }));
