@@ -8,6 +8,7 @@ const FEEDS = [
   { id: "dubbindo-latest", name: "Terbaru Dubbindo", url: "/videos/latest/rss", type: "movie" },
   { id: "dubbindo-movies", name: "Film Movie", url: "/videos/category/1/rss", type: "movie" },
   { id: "dubbindo-other", name: "Other", url: "/videos/category/other/rss", type: "movie" },
+  { id: "dubbindo-uncategory", name: "Uncategory", url: "/videos/category/791/rss", type: "movie" },
   { id: "dubbindo-tv", name: "TV Series", url: "/videos/category/3/rss", type: "series" },
   { id: "dubbindo-anime-movies", name: "Anime Movie", url: "/videos/category/4/rss", type: "movie" },
   { id: "dubbindo-anime-series", name: "Anime Series", url: "/videos/category/5/rss", type: "series" }
@@ -15,7 +16,7 @@ const FEEDS = [
 
 const manifest = {
   id: "community.dubbindo.nuvio",
-  version: "0.5.0",
+  version: "0.6.0",
   name: "Dubbindo",
   description: "Katalog Dubbindo: film, serial TV, dan anime dubbing Indonesia.",
   resources: ["catalog", "meta", "stream"],
@@ -148,7 +149,7 @@ async function getFeed(feed) {
   const cached = cache.get(feed.url);
   if (cached && Date.now() - cached.time < CACHE_MS) return cached.items;
   const response = await fetch(BASE + feed.url, {
-    headers: { "User-Agent": "Dubbindo-Nuvio-Addon/0.5.0", "Accept": "application/rss+xml, application/xml, text/xml" },
+    headers: { "User-Agent": "Dubbindo-Nuvio-Addon/0.6.0", "Accept": "application/rss+xml, application/xml, text/xml" },
     signal: AbortSignal.timeout(12000)
   });
   if (!response.ok) throw new Error("Dubbindo RSS returned HTTP " + response.status);
@@ -243,7 +244,7 @@ app.get("/healthz", (_req, res) => res.json({
   ok: true,
   addon: manifest.id,
   version: manifest.version,
-  status: "rss-catalog-series-grouping-other-category-official-embed",
+  status: "rss-catalog-series-grouping-uncategory-official-embed",
   catalogs: FEEDS.map(({ id, name, type }) => ({ id, name, type })),
   playbackMode: "official-embed",
   directStreamsConnected: false
