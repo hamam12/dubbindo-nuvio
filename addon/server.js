@@ -7,10 +7,9 @@ const BASE = "https://www.dubbindo.site";
 const FEEDS = [
   { id: "dubbindo-latest", name: "Terbaru Dubbindo", url: "/videos/latest/rss", type: "movie" },
   { id: "dubbindo-movies", name: "Film Movie", url: "/videos/category/1/rss", type: "movie" },
-  { id: "dubbindo-other", name: "Other", url: "/videos/category/2/rss", type: "movie" },
-  { id: "dubbindo-tv", name: "TV Series", url: "/videos/category/3/rss", type: "series" },
+  { id: "dubbindo-tv", name: "TV Series (episode)", url: "/videos/category/3/rss", type: "movie" },
   { id: "dubbindo-anime-movies", name: "Anime Movie", url: "/videos/category/4/rss", type: "movie" },
-  { id: "dubbindo-anime-series", name: "Anime Series", url: "/videos/category/5/rss", type: "series" }
+  { id: "dubbindo-anime-series", name: "Anime Series (episode)", url: "/videos/category/5/rss", type: "movie" }
 ];
 
 const manifest = {
@@ -19,7 +18,7 @@ const manifest = {
   name: "Dubbindo",
   description: "Katalog Dubbindo: film, serial TV, dan anime dubbing Indonesia.",
   resources: ["catalog", "meta", "stream"],
-  types: ["movie", "series"],
+  types: ["movie"],
   catalogs: FEEDS.map(feed => ({
     type: feed.type, id: feed.id, name: feed.name,
     extra: [{ name: "search", isRequired: false }]
@@ -118,7 +117,7 @@ builder.defineCatalogHandler(async ({ type, id, extra }) => {
 });
 
 builder.defineMetaHandler(async ({ type, id }) => {
-  if (type !== "movie" && type !== "series") return { meta: null };
+  if (type !== "movie") return { meta: null };
   try {
     const slug = String(id || "").replace(/^dubbindo:/, "");
     if (!slug || slug.includes("/") || slug.includes("..")) return { meta: null };
@@ -152,7 +151,7 @@ builder.defineMetaHandler(async ({ type, id }) => {
 builder.defineStreamHandler(async ({ type, id }) => {
   try {
     const slug = String(id || "").replace(/^dubbindo:/, "");
-    if ((type !== "movie" && type !== "series") || !slug || slug.includes("/") || slug.includes("..")) return { streams: [] };
+    if (type !== "movie" || !slug || slug.includes("/") || slug.includes("..")) return { streams: [] };
     for (const feed of FEEDS.filter(entry => entry.type === type)) {
       const found = (await getFeed(feed)).find(item => item.id === id);
       if (found && found._embedUrl) return { streams: [{
