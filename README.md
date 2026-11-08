@@ -8,6 +8,7 @@ The addon reads Dubbindo's public RSS feeds and exposes separate catalogs:
 
 - Terbaru Dubbindo
 - Film Movie
+- Other
 - TV Series
 - Anime Movie
 - Anime Series
@@ -43,7 +44,7 @@ npm start
 
 ## Known limitations
 
-- The addon depends on the RSS feeds exposed by Dubbindo. Feed item limits determine how much of the catalog is available; this is not yet a crawl of every historical listing page.
+- The addon includes the known public RSS categories, including Other. It still depends on Dubbindo's feed coverage and item limits; it does not yet crawl every historical listing page or unverified categories such as Shorts/Uncategorized.
 - Series grouping is inferred from title patterns such as `S1 E4`, `S01E04`, and `Episode 4`. Titles without recognizable episode numbering may be grouped as a one-episode series.
 - Episode grouping and playback have been implemented in the addon code but still need a live Render/Nuvio test.
 - Playback is through Dubbindo's official embed page, not native in-app MP4/HLS playback.
