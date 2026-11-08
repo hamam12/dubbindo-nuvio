@@ -1,15 +1,15 @@
 {
-  "name": "Dubbindo Nuvio Repository",
-  "version": "1.0.0",
-  "description": "Community scaffold for a Dubbindo scraper provider for Nuvio.",
+  "name": "Dubbindo Nuvio",
+  "version": "1.0.1",
+  "description": "Native Nuvio provider for verified public Dubbindo MP4/HLS streams.",
   "scrapers": [
     {
       "id": "dubbindo",
       "name": "Dubbindo Indonesia",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "filename": "providers/dubbindo.js",
-      "supportedTypes": ["movie", "tv"],
-      "enabled": false,
+      "supportedTypes": ["movie"],
+      "enabled": true,
       "contentLanguage": ["id"],
       "formats": ["mp4", "m3u8"],
       "limited": true,
