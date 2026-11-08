@@ -16,7 +16,7 @@ The addon reads Dubbindo's public RSS feeds and exposes separate catalogs:
 
 Movie feeds appear as movie entries. TV Series and Anime Series feeds are grouped into series entries using season/episode patterns in their titles. Each grouped series metadata object includes an episode list, and each episode opens its corresponding Dubbindo embed page.
 
-Search filters the returned catalog names and descriptions. Feed responses are cached in memory for three minutes.
+Search filters the returned catalog names and descriptions. Feed responses are cached in memory for three minutes. Each movie/series metadata entry also links to its official Dubbindo category page so users can continue through the site pagination.
 
 ## Playback behavior
 
@@ -45,7 +45,7 @@ npm start
 
 ## Known limitations
 
-- The addon includes the verified RSS categories: Film Movie, Other, TV Series, Anime Movie, Anime Series, and Uncategory. It still depends on feed coverage and item limits; it does not yet crawl every historical listing page. Shorts is a separate site section and has not been added because a matching RSS endpoint has not been verified.
+- The addon includes the verified RSS categories: Film Movie, Other, TV Series, Anime Movie, Anime Series, and Uncategory. Dubbindo category pages use page_id pagination, but the pages display an 18+ age-confirmation prompt. This addon deliberately does not automate or bypass that confirmation, so it keeps RSS as its catalog source and adds official category-page links for browsing the remaining pages. Shorts is a separate site section and has not been added because a matching RSS endpoint has not been verified.
 - Series grouping is inferred from title patterns such as `S1 E4`, `S01E04`, and `Episode 4`. Titles without recognizable episode numbering may be grouped as a one-episode series.
 - Episode grouping and playback have been implemented in the addon code but still need a live Render/Nuvio test.
 - Playback is through Dubbindo's official embed page, not native in-app MP4/HLS playback.
