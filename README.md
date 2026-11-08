@@ -1,41 +1,40 @@
 # Dubbindo Nuvio
 
-Community scaffold for integrating Dubbindo Indonesia as a Nuvio scraper provider.
+Community project for a Dubbindo integration with Nuvio and Stremio-compatible clients.
 
-> **Status: not ready for playback.** This repository currently contains provider metadata and a safe placeholder implementation. It does not yet resolve playable streams.
+## Project status
 
-## Repository layout
+**The addon server scaffold is ready to deploy, but it is not yet connected to Dubbindo's catalog or playback source.** It currently returns empty catalog, metadata, and stream results. Do not treat this as a working streaming addon yet.
 
-- `manifest.json` — repository and scraper metadata.
-- `providers/dubbindo.js` — provider entry point.
+## Project components
 
-## Current behavior
+- `manifest.json` and `providers/dubbindo.js` — original Nuvio scraper-provider scaffold.
+- `addon/` — Stremio-protocol-compatible HTTP addon server with movie/series catalog, metadata, and stream handlers.
+- `render.yaml` — Render Blueprint configuration for the addon web service.
 
-The provider exports:
+## Deploy the addon on Render
 
-```js
-getStreams(tmdbId, mediaType, season, episode)
-```
+1. Open Render and choose **New + → Blueprint**.
+2. Connect GitHub if prompted, then select `hamam12/dubbindo-nuvio`.
+3. Render reads `render.yaml` and creates the `dubbindo-nuvio-addon` service.
+4. Deploy using the Free plan.
+5. Once deployed, verify the service's `/healthz` and `/manifest.json` endpoints.
 
-At present, this function intentionally returns an empty array. Dubbindo's public page structure and authorized direct media URLs have not been verified, so the implementation does not guess endpoints or attempt to bypass access controls.
+The addon install URL will be:
 
-## Integration notes
+`https://YOUR-SERVICE-NAME.onrender.com/manifest.json`
 
-A Nuvio scraper provider resolves streams for a title or episode already selected in Nuvio. It does not automatically provide a movie/series catalog, trending list, search, or latest releases. Those features require a separate catalog integration.
+Replace the hostname with the actual URL Render assigns. Add that manifest URL in Nuvio if its addon installation flow supports Stremio-compatible manifests.
 
-The manifest's scraper is disabled by default until a working implementation is tested.
+Free Render services can spin down after inactivity and may take longer to respond to the first request.
 
-## Development checklist
+## Local development
 
-1. Verify the source site's public page structure and terms.
-2. Confirm that any media URLs used are publicly accessible and authorized for this integration.
-3. Implement extraction for movies and episodic content using Nuvio's current provider contract.
-4. Test valid, unavailable, and malformed titles; avoid returning unverified URLs.
-5. Enable the scraper only after successful playback tests.
+See [addon/README.md](addon/README.md). Requires Node.js 18 or newer.
 
-## Safety
+## Implementing the Dubbindo source
 
-Do not use this project to bypass DRM, paywalls, login requirements, geographic restrictions, or other access controls. Respect copyright and the source site's terms.
+Before connecting catalog and playback, verify an official Dubbindo API, feed, or embed specification and permission to use it. This project will not guess private endpoints, bypass authentication, age gates, DRM, paywalls, or access controls, or redistribute streams without authorization.
 
 ## License
 
