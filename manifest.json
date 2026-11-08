@@ -1,25 +1,23 @@
-[
-  {
-    "id": "dubbindo",
-    "name": "Dubbindo Indonesia",
-    "description": "Native Dubbindo source resolver for publicly exposed MP4/HLS streams.",
-    "version": "0.2.1",
-    "author": "hamam12",
-    "supportedTypes": [
-      "movie"
-    ],
-    "filename": "providers/dubbindo.js",
-    "enabled": true,
-    "logo": "",
-    "contentLanguage": [
-      "id"
-    ],
-    "formats": [
-      "mp4",
-      "m3u8"
-    ],
-    "limited": true,
-    "disabledPlatforms": [],
-    "supportsExternalPlayer": false
-  }
-]
+{
+  "name": "Dubbindo Nuvio",
+  "version": "0.2.2",
+  "description": "Native Dubbindo stream provider for Nuvio.",
+  "author": "hamam12",
+  "scrapers": [
+    {
+      "id": "dubbindo",
+      "name": "Dubbindo Indonesia",
+      "description": "Finds publicly exposed MP4/HLS streams from Dubbindo watch pages.",
+      "version": "0.2.2",
+      "filename": "providers/dubbindo.js",
+      "supportedTypes": ["movie"],
+      "enabled": true,
+      "logo": "",
+      "contentLanguage": ["id"],
+      "formats": ["mp4", "m3u8"],
+      "limited": true,
+      "disabledPlatforms": [],
+      "supportsExternalPlayer": false
+    }
+  ]
+}
