@@ -31,18 +31,18 @@ const CACHE_MS = 3 * 60 * 1000;
 
 function decodeXml(value = "") {
   return value
-    .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">").replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'");
 }
 
 function cleanText(value = "") {
-  return decodeXml(value.replace(/<[^>]*>/g, " ")).replace(/\\s+/g, " ").trim();
+  return decodeXml(value.replace(/<[^>]*>/g, " ")).replace(/\s+/g, " ").trim();
 }
 
 function tagValue(xml, tag) {
-  const match = xml.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
+  const match = xml.match(new RegExp("<" + tag + "(?:\s[^>]*)?>([\s\S]*?)</" + tag + ">", "i"));
   return match ? decodeXml(match[1].trim()) : "";
 }
 
@@ -57,13 +57,13 @@ function imageFromItem(item) {
 }
 
 function parseFeed(xml, type) {
-  const items = xml.match(/<item\\b[\\s\\S]*?<\\/item>/gi) || [];
+  const items = xml.match(/<item\b[\s\S]*?<\/item>/gi) || [];
   return items.map(item => {
     const link = tagValue(item, "link");
     const guid = tagValue(item, "guid");
-    const url = /^https?:\\/\\//i.test(link) ? link : guid;
+    const url = /^https?:\/\//i.test(link) ? link : guid;
     if (!url || !url.includes("/watch/")) return null;
-    const slug = url.split("/").pop().replace(/\\.html(?:\\?.*)?$/i, "");
+    const slug = url.split("/").pop().replace(/\.html(?:\?.*)?$/i, "");
     const token = slug.includes("_") ? slug.slice(slug.lastIndexOf("_") + 1) : "";
     if (!token) return null;
     const title = cleanText(tagValue(item, "title")) || slug;
@@ -87,7 +87,7 @@ async function getFeed(feed) {
   });
   if (!response.ok) throw new Error("Dubbindo RSS returned HTTP " + response.status);
   const xml = await response.text();
-  if (!/<(?:rss|feed)\\b/i.test(xml)) throw new Error("Dubbindo did not return an RSS feed");
+  if (!/<(?:rss|feed)\b/i.test(xml)) throw new Error("Dubbindo did not return an RSS feed");
   const items = parseFeed(xml, feed.type);
   cache.set(feed.url, { time: Date.now(), items });
   return items;
@@ -121,7 +121,7 @@ builder.defineMetaHandler(async ({ type, id }) => {
   try {
     const slug = String(id || "").replace(/^dubbindo:/, "");
     if (!slug || slug.includes("/") || slug.includes("..")) return { meta: null };
-    for (const feed of FEEDS.filter(entry => entry.type === type)) {
+    for (const feed of FEEDS) {
       const found = (await getFeed(feed)).find(item => item.id === id);
       if (found) return { meta: publicMeta(found) };
     }
@@ -132,7 +132,7 @@ builder.defineMetaHandler(async ({ type, id }) => {
     });
     if (!response.ok) return { meta: null };
     const html = await response.text();
-    const title = (html.match(/<h1[^>]*>([\\s\\S]*?)<\\/h1>/i) || [])[1];
+    const title = (html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i) || [])[1];
     if (!title) return { meta: null };
     const description = (html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)/i) || [])[1];
     const poster = (html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']*)/i) || [])[1];
@@ -152,7 +152,7 @@ builder.defineStreamHandler(async ({ type, id }) => {
   try {
     const slug = String(id || "").replace(/^dubbindo:/, "");
     if (type !== "movie" || !slug || slug.includes("/") || slug.includes("..")) return { streams: [] };
-    for (const feed of FEEDS.filter(entry => entry.type === type)) {
+    for (const feed of FEEDS) {
       const found = (await getFeed(feed)).find(item => item.id === id);
       if (found && found._embedUrl) return { streams: [{
         name: "Dubbindo", title: "Buka pemutar resmi Dubbindo", externalUrl: found._embedUrl
